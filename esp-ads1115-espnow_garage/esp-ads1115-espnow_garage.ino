@@ -12,7 +12,18 @@ int buttonState ;  // 0 = waiting for press, 1= waiting for release 2= different
 #include <WiFi.h>
 int esp_now_mesh_id;
 uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+#define debug(x) Serial.print(x)
+#define debugln(x) Serial.println(x)
 
+typedef struct esp_now_frame_t {
+  int mesh_id;
+  unsigned long can_id;
+  byte len;
+  uint8_t d[8];
+};
+
+esp_now_frame_t esp_now_frame;
+esp_now_peer_info_t peerInfo;
 
 void setup(void)
 {
@@ -71,6 +82,20 @@ bool initESPNow() {
   debugln(esp_now_mesh_id);
 
   return true;
+}
+
+int getMeshID() {
+
+  uint8_t baseMac[6];
+  esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
+  uint32_t uniqueID = 0;
+  for (int i = 2; i < 6; i++) {
+    uniqueID <<= 8;
+    uniqueID |= baseMac[i];
+  }
+  // Limit the integer to the maximum value of an int (32,767)
+  uniqueID %= 32768;
+  return (int)uniqueID;
 }
 
 
