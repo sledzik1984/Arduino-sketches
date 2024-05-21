@@ -8,7 +8,10 @@ Adafruit_ADS1115 ads;  /* Use this for the 16-bit version */
 unsigned long inStateAtMs = millis() ;
 int buttonState ;  // 0 = waiting for press, 1= waiting for release 2= differentiate single or double 3= wait button release (double)
 
-
+#include <esp_now.h>
+#include <WiFi.h>
+int esp_now_mesh_id;
+uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
 
 void setup(void)
@@ -37,8 +40,40 @@ void setup(void)
     Serial.println("Failed to initialize ADS.");
     while (1);
   }
+    if (!initESPNow()) {
+    debugln(" SYSTEM......... FAIL");
+    debugln(" ... restarting");
+    delay(60 * 1000);
+    ESP.restart();
+  }
 }
- 
+
+bool initESPNow() {
+
+  debugln(" ESPNOW............INIT");
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
+  if (esp_now_init() != ESP_OK) {
+    debugln(" ESPNOW.............FAIL");
+    return false;
+  }
+  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+  peerInfo.channel = 1;
+  peerInfo.encrypt = false;
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+    debugln(" ESPNOW.............FAIL");
+    return false;
+  }
+  debugln(" ESPNOW..............OK");
+
+  esp_now_mesh_id = getMeshID();
+  debug(" MESH ID..........");
+  debugln(esp_now_mesh_id);
+
+  return true;
+}
+
+
 void loop(void)
 {
   int16_t adc0;
