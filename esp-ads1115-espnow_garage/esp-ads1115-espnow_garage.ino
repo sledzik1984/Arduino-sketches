@@ -5,6 +5,12 @@ Adafruit_ADS1115 ads;  /* Use this for the 16-bit version */
 #define SDA_PIN 21 
 #define SCL_PIN 22
 
+unsigned long inStateAtMs = millis() ;
+int buttonState ;  // 0 = waiting for press, 1= waiting for release 2= differentiate single or double 3= wait button release (double)
+
+
+
+
 void setup(void)
 {
   Serial.begin(115200);
@@ -12,6 +18,7 @@ void setup(void)
   ads.begin();
   Serial.println("Getting single-ended readings from AIN0..3");
   Serial.println("ADC Range: +/- 6.144V (1 bit = 3mV/ADS1015, 0.1875mV/ADS1115)");
+
  
   // The ADC input range (or gain) can be changed via the following
   // functions, but be careful never to exceed VDD +0.3V max, or to
@@ -34,22 +41,64 @@ void setup(void)
  
 void loop(void)
 {
-  int16_t adc0, adc1, adc2, adc3;
-  float volts0, volts1, volts2, volts3;
+  int16_t adc0;
+  float volts0;
  
   adc0 = ads.readADC_SingleEnded(0);
-  adc1 = ads.readADC_SingleEnded(1);
-  adc2 = ads.readADC_SingleEnded(2);
-  adc3 = ads.readADC_SingleEnded(3);
- 
+  
   volts0 = ads.computeVolts(adc0);
-  volts1 = ads.computeVolts(adc1);
-  volts2 = ads.computeVolts(adc2);
-  volts3 = ads.computeVolts(adc3);
- 
-  Serial.println("-----------------------------------------------------------");
-  Serial.print("AIN0: "); Serial.print(adc0); Serial.print("  "); Serial.print(volts0); Serial.println("V");
-  Serial.print("AIN1: "); Serial.print(adc1); Serial.print("  "); Serial.print(volts1); Serial.println("V");
-  Serial.print("AIN2: "); Serial.print(adc2); Serial.print("  "); Serial.print(volts2); Serial.println("V");
-  Serial.print("AIN3: "); Serial.print(adc3); Serial.print("  "); Serial.print(volts3); Serial.println("V");
+  
+  //Serial.println("-----------------------------------------------------------");
+  //Serial.print("AIN0: "); Serial.print(adc0); Serial.print("  "); Serial.print(volts0); Serial.println("V");
+  
+  //if ( volts0 > 3) {
+
+
+
+ if ( buttonState == 0 ) {
+   // wait for button press
+   //Serial.println("Sleep");
+   if ( millis() - inStateAtMs > 300 ) {
+     if ( volts0 > 3) {
+       buttonState = 1 ;
+       Serial.println("buttonState = 1 PUSHED ONCE!");
+       inStateAtMs = millis();
+     }
+   }
+ }
+ else if ( buttonState == 1 ) {
+   // wait for stable button release 1
+   if ( millis() - inStateAtMs > 300 && volts0 < 3 ) {
+     buttonState = 2 ;
+     
+     inStateAtMs = millis();
+   }
+ }
+ else if ( buttonState == 2 ) {
+   // differentiate between single and double press
+   if ( millis() - inStateAtMs > 1000 ) {
+     // timeout - is a single press
+     Serial.println("single");
+     buttonState = 0 ;
+     inStateAtMs = millis() ;
+   }
+   else if (  ( volts0 > 3 ) && (millis() - inStateAtMs > 300 ) ) {
+     // got second press within timeout - double
+     Serial.println("double");
+     buttonState = 3 ;
+     inStateAtMs = millis() ;
+   }
+ }
+ else if ( buttonState == 3 ) {
+   // wait for stable button release 2
+   if ( millis() - inStateAtMs > 300 && volts0 < 3 ) {
+     buttonState = 0 ;
+     Serial.println("Btn Released");
+     inStateAtMs = millis();
+   }
+ }
+
+
+
+
 }
