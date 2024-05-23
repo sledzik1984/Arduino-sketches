@@ -30,6 +30,10 @@ void setup(void)
   Serial.begin(115200);
   Wire.begin(SDA_PIN, SCL_PIN);
   ads.begin();
+  btStop();  // make sure BT is disabled
+  Serial.println("Disabling BT");
+  setCpuFrequencyMhz(80);
+  Serial.println("CPU Set to 80Mhz");
   Serial.println("Getting single-ended readings from AIN0..3");
   Serial.println("ADC Range: +/- 6.144V (1 bit = 3mV/ADS1015, 0.1875mV/ADS1115)");
 
@@ -136,7 +140,7 @@ void loop(void)
  }
  else if ( buttonState == 2 ) {
    // differentiate between single and double press
-   if ( millis() - inStateAtMs > 1000 ) {
+   if ( millis() - inStateAtMs > 1500 ) {
      // timeout - is a single press
      Serial.println("single");
      buttonState = 0 ;
