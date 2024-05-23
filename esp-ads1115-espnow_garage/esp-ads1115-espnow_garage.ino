@@ -1,3 +1,5 @@
+//https://docs.arduino.cc/tutorials/nano-esp32/esp-now/
+
 #include <Adafruit_ADS1X15.h>
 Adafruit_ADS1115 ads;  /* Use this for the 16-bit version */
 //Adafruit_ADS1015 ads;     /* Use this for the 12-bit version */
@@ -7,23 +9,35 @@ Adafruit_ADS1115 ads;  /* Use this for the 16-bit version */
 
 unsigned long inStateAtMs = millis() ;
 int buttonState ;  // 0 = waiting for press, 1= waiting for release 2= differentiate single or double 3= wait button release (double)
+int btn_to_send; 
 
 #include <esp_now.h>
 #include <WiFi.h>
 int esp_now_mesh_id;
-uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 #define debug(x) Serial.print(x)
 #define debugln(x) Serial.println(x)
 
-typedef struct esp_now_frame_t {
-  int mesh_id;
-  unsigned long can_id;
-  byte len;
-  uint8_t d[8];
-};
+// REPLACE WITH YOUR RECEIVER MAC Address
+uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
-esp_now_frame_t esp_now_frame;
+// Structure example to send data
+// Must match the receiver structure
+typedef struct struct_message {
+  //char a[32];
+  int b;
+  //float c;
+  //bool d;
+} struct_message;
+
+struct_message myData;
 esp_now_peer_info_t peerInfo;
+
+// callback when data is sent
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+}
+
 
 void setup(void)
 {
@@ -113,10 +127,10 @@ void loop(void)
   volts0 = ads.computeVolts(adc0);
   
   //Serial.println("-----------------------------------------------------------");
-  Serial.print("AIN0: "); Serial.print(adc0); Serial.print("  "); Serial.print(volts0); Serial.println("V");
+  //Serial.print("AIN0: "); Serial.print(adc0); Serial.print("  "); Serial.print(volts0); Serial.println("V");
   
   //if ( volts0 > 3) {
-
+  btn_to_send = 0;
 
 
  if ( buttonState == 0 ) {
@@ -143,13 +157,15 @@ void loop(void)
    if ( millis() - inStateAtMs > 1500 ) {
      // timeout - is a single press
      Serial.println("single");
+     btn_to_send = 1;
      buttonState = 0 ;
      inStateAtMs = millis() ;
    }
-   else if (  ( volts0 > 2.51 ) && (millis() - inStateAtMs > 300 ) ) {
+   else if (  ( volts0 > 3 ) && (millis() - inStateAtMs > 300 ) ) {
      // got second press within timeout - double
      Serial.println("double");
      buttonState = 3 ;
+     btn_to_send = 2;
      inStateAtMs = millis() ;
    }
  }
@@ -157,11 +173,58 @@ void loop(void)
    // wait for stable button release 2
    if ( millis() - inStateAtMs > 300 && volts0 < 2.51 ) {
      buttonState = 0 ;
+     btn_to_send = 0;
      Serial.println("Btn Released");
      inStateAtMs = millis();
    }
  }
 
+ if (btn_to_send == 0) {
+
+ } else if (btn_to_send == 1) {
+
+
+  // Set values to send
+  //strcpy(myData.a, "THIS IS A CHAR"); 
+  myData.b = btn_to_send;
+  //myData.c = 1.2; // Fake data
+  //myData.d = false; 
+  
+  // Send message via ESP-NOW
+  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
+   
+  if (result == ESP_OK) {
+    Serial.println("Sent with success");
+  }
+  else {
+    Serial.println("Error sending the data");
+  }
+
+
+
+
+ } else if (btn_to_send == 2) {
+
+  // Set values to send
+  //strcpy(myData.a, "THIS IS A CHAR"); 
+  myData.b = btn_to_send;
+  //myData.c = 1.2; // Fake data
+  //myData.d = false; 
+  
+  // Send message via ESP-NOW
+  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
+   
+  if (result == ESP_OK) {
+    Serial.println("Sent with success");
+  }
+  else {
+    Serial.println("Error sending the data");
+  }
+
+
+
+
+ }
 
 
 
