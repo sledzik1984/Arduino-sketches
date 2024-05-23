@@ -44,6 +44,10 @@ void setup(void)
   Serial.begin(115200);
   Wire.begin(SDA_PIN, SCL_PIN);
   ads.begin();
+  btStop();  // make sure BT is disabled
+  Serial.println("Disabling BT");
+  setCpuFrequencyMhz(80);
+  Serial.println("CPU Set to 80Mhz");
   Serial.println("Getting single-ended readings from AIN0..3");
   Serial.println("ADC Range: +/- 6.144V (1 bit = 3mV/ADS1015, 0.1875mV/ADS1115)");
 
@@ -133,7 +137,7 @@ void loop(void)
    // wait for button press
    //Serial.println("Sleep");
    if ( millis() - inStateAtMs > 300 ) {
-     if ( volts0 > 3) {
+     if ( volts0 > 2.51) {
        buttonState = 1 ;
        Serial.println("buttonState = 1 PUSHED ONCE!");
        inStateAtMs = millis();
@@ -142,7 +146,7 @@ void loop(void)
  }
  else if ( buttonState == 1 ) {
    // wait for stable button release 1
-   if ( millis() - inStateAtMs > 300 && volts0 < 3 ) {
+   if ( millis() - inStateAtMs > 300 && volts0 < 2.51 ) {
      buttonState = 2 ;
      
      inStateAtMs = millis();
@@ -150,7 +154,7 @@ void loop(void)
  }
  else if ( buttonState == 2 ) {
    // differentiate between single and double press
-   if ( millis() - inStateAtMs > 1000 ) {
+   if ( millis() - inStateAtMs > 1500 ) {
      // timeout - is a single press
      Serial.println("single");
      btn_to_send = 1;
@@ -167,7 +171,7 @@ void loop(void)
  }
  else if ( buttonState == 3 ) {
    // wait for stable button release 2
-   if ( millis() - inStateAtMs > 300 && volts0 < 3 ) {
+   if ( millis() - inStateAtMs > 300 && volts0 < 2.51 ) {
      buttonState = 0 ;
      btn_to_send = 0;
      Serial.println("Btn Released");
