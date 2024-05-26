@@ -1,14 +1,10 @@
 //https://docs.arduino.cc/tutorials/nano-esp32/esp-now/
 
-#include <Adafruit_ADS1X15.h>
-Adafruit_ADS1115 ads;  /* Use this for the 16-bit version */
-//Adafruit_ADS1015 ads;     /* Use this for the 12-bit version */
+#include <EasyButton.h>
+int duration = 1000;
+#define BUTTON_PIN 23
+#define EXT_LED 22
 
-#define SDA_PIN 21 
-#define SCL_PIN 22
-
-unsigned long inStateAtMs = millis() ;
-int buttonState ;  // 0 = waiting for press, 1= waiting for release 2= differentiate single or double 3= wait button release (double)
 int btn_to_send; 
 
 #include <esp_now.h>
@@ -19,6 +15,10 @@ int esp_now_mesh_id;
 
 // REPLACE WITH YOUR RECEIVER MAC Address
 uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+
+EasyButton button(BUTTON_PIN);
+
 
 // Structure example to send data
 // Must match the receiver structure
@@ -38,43 +38,78 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
+void onPressedForDuration() {
+    Serial.println("Button has been pressed for the given duration!");
+    btn_to_send = 1;
+}
+void onPressed() {
+    Serial.println("Button has been pressed!");
+    btn_to_send = 2;
+}
+
+void led_sent_ok() {
+    Serial.println("LED TRIGG SENT OK");
+    digitalWrite(EXT_LED, HIGH);
+    delay(150);
+    digitalWrite(EXT_LED, LOW);
+    delay(150);
+    digitalWrite(EXT_LED, HIGH);
+    delay(150);
+    digitalWrite(EXT_LED, LOW);
+    delay(150);
+    digitalWrite(EXT_LED, HIGH);
+    delay(300);
+    digitalWrite(EXT_LED, LOW);
+    
+}
+
+
+void init_ok() {
+    Serial.println("LED TRIGG SENT OK");
+    digitalWrite(EXT_LED, HIGH);
+    delay(50);
+    digitalWrite(EXT_LED, LOW);
+    delay(50);
+    digitalWrite(EXT_LED, HIGH);
+    delay(50);
+    digitalWrite(EXT_LED, LOW);
+    delay(50);
+    digitalWrite(EXT_LED, HIGH);
+    delay(50);
+    digitalWrite(EXT_LED, LOW);
+    
+}
 
 void setup(void)
 {
   Serial.begin(115200);
-  Wire.begin(SDA_PIN, SCL_PIN);
-  ads.begin();
   btStop();  // make sure BT is disabled
   Serial.println("Disabling BT");
   setCpuFrequencyMhz(80);
   Serial.println("CPU Set to 80Mhz");
-  Serial.println("Getting single-ended readings from AIN0..3");
-  Serial.println("ADC Range: +/- 6.144V (1 bit = 3mV/ADS1015, 0.1875mV/ADS1115)");
 
- 
-  // The ADC input range (or gain) can be changed via the following
-  // functions, but be careful never to exceed VDD +0.3V max, or to
-  // exceed the upper and lower limits if you adjust the input range!
-  // Setting these values incorrectly may destroy your ADC!
-  //                                                                ADS1015  ADS1115
-  //                                                                -------  -------
-  // ads.setGain(GAIN_TWOTHIRDS);  // 2/3x gain +/- 6.144V  1 bit = 3mV      0.1875mV (default)
-  // ads.setGain(GAIN_ONE);        // 1x gain   +/- 4.096V  1 bit = 2mV      0.125mV
-  //ads.setGain(GAIN_TWO);        // 2x gain   +/- 2.048V  1 bit = 1mV      0.0625mV
-  // ads.setGain(GAIN_FOUR);       // 4x gain   +/- 1.024V  1 bit = 0.5mV    0.03125mV
-  // ads.setGain(GAIN_EIGHT);      // 8x gain   +/- 0.512V  1 bit = 0.25mV   0.015625mV
-  // ads.setGain(GAIN_SIXTEEN);    // 16x gain  +/- 0.256V  1 bit = 0.125mV  0.0078125mV
-  if (!ads.begin())
-  {
-    Serial.println("Failed to initialize ADS.");
-    while (1);
-  }
-    if (!initESPNow()) {
-    debugln(" SYSTEM......... FAIL");
-    debugln(" ... restarting");
-    delay(60 * 1000);
-    ESP.restart();
-  }
+  pinMode(EXT_LED, OUTPUT);
+  
+
+
+  // Initialize the button.
+  button.begin();
+  // Attach callback.
+  button.onPressedFor(duration, onPressedForDuration);
+  // Attach callback.
+  button.onPressed(onPressed);
+
+
+
+
+   if (!initESPNow()) {
+   debugln(" SYSTEM......... FAIL");
+   debugln(" ... restarting");
+   delay(60 * 1000);
+   ESP.restart();
+
+   }
+
 }
 
 bool initESPNow() {
@@ -98,6 +133,7 @@ bool initESPNow() {
   esp_now_mesh_id = getMeshID();
   debug(" MESH ID..........");
   debugln(esp_now_mesh_id);
+  init_ok();
 
   return true;
 }
@@ -119,113 +155,46 @@ int getMeshID() {
 
 void loop(void)
 {
-  int16_t adc0;
-  float volts0;
+ btn_to_send = 0;
  
-  adc0 = ads.readADC_SingleEnded(0);
-  
-  volts0 = ads.computeVolts(adc0);
-  
-  //Serial.println("-----------------------------------------------------------");
-  //Serial.print("AIN0: "); Serial.print(adc0); Serial.print("  "); Serial.print(volts0); Serial.println("V");
-  
-  //if ( volts0 > 3) {
-  btn_to_send = 0;
-
-
- if ( buttonState == 0 ) {
-   // wait for button press
-   //Serial.println("Sleep");
-   if ( millis() - inStateAtMs > 300 ) {
-     if ( volts0 > 2.51) {
-       buttonState = 1 ;
-       Serial.println("buttonState = 1 PUSHED ONCE!");
-       inStateAtMs = millis();
-     }
-   }
- }
- else if ( buttonState == 1 ) {
-   // wait for stable button release 1
-   if ( millis() - inStateAtMs > 300 && volts0 < 2.51 ) {
-     buttonState = 2 ;
-     
-     inStateAtMs = millis();
-   }
- }
- else if ( buttonState == 2 ) {
-   // differentiate between single and double press
-   if ( millis() - inStateAtMs > 1500 ) {
-     // timeout - is a single press
-     Serial.println("single");
-     btn_to_send = 1;
-     buttonState = 0 ;
-     inStateAtMs = millis() ;
-   }
-   else if (  ( volts0 > 3 ) && (millis() - inStateAtMs > 300 ) ) {
-     // got second press within timeout - double
-     Serial.println("double");
-     buttonState = 3 ;
-     btn_to_send = 2;
-     inStateAtMs = millis() ;
-   }
- }
- else if ( buttonState == 3 ) {
-   // wait for stable button release 2
-   if ( millis() - inStateAtMs > 300 && volts0 < 2.51 ) {
-     buttonState = 0 ;
-     btn_to_send = 0;
-     Serial.println("Btn Released");
-     inStateAtMs = millis();
-   }
- }
-
+ button.read();
+ 
+ 
  if (btn_to_send == 0) {
+ 
 
  } else if (btn_to_send == 1) {
 
-
-  // Set values to send
-  //strcpy(myData.a, "THIS IS A CHAR"); 
   myData.b = btn_to_send;
-  //myData.c = 1.2; // Fake data
-  //myData.d = false; 
-  
+ 
   // Send message via ESP-NOW
   esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
    
   if (result == ESP_OK) {
-    Serial.println("Sent with success");
+    Serial.println("Sent 1 with success");
+    led_sent_ok();
+
   }
   else {
     Serial.println("Error sending the data");
   }
-
-
-
 
  } else if (btn_to_send == 2) {
 
-  // Set values to send
-  //strcpy(myData.a, "THIS IS A CHAR"); 
   myData.b = btn_to_send;
-  //myData.c = 1.2; // Fake data
-  //myData.d = false; 
   
   // Send message via ESP-NOW
   esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
    
   if (result == ESP_OK) {
-    Serial.println("Sent with success");
+    Serial.println("Sent 2 with success");
+    led_sent_ok();
+
   }
   else {
     Serial.println("Error sending the data");
   }
 
-
-
-
  }
-
-
 
 }
