@@ -13,7 +13,7 @@
 #include <WiFi.h> //For ESP32
 
 #define LED_PIN 10
-
+#define RELAY 26
 
 // Structure example to receive data
 // Must match the sender structure
@@ -45,18 +45,20 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
 
   } else if (myData.b == 1) {
   
-    digitalWrite (LED_PIN, HIGH);
+    digitalWrite (LED_PIN, HIGH); digitalWrite (RELAY, HIGH);
     delay(100);
     Serial.println("LONG!");
-    digitalWrite (LED_PIN, LOW);
+    digitalWrite (LED_PIN, LOW);digitalWrite (RELAY, LOW);
     delay(100);
     digitalWrite (LED_PIN, HIGH);
+    
+    
 
   } else if (myData.b == 2) {
 
     digitalWrite (LED_PIN, HIGH);
     delay(100);
-    Serial.println("SHORT!");
+    Serial.println("SHORT - Ignoring that!");
     digitalWrite (LED_PIN, LOW);
     delay(100);
     digitalWrite (LED_PIN, HIGH);
@@ -81,8 +83,13 @@ void setup() {
   // Once ESPNow is successfully Init, we will register for recv CB to
   // get recv packer info
   esp_now_register_recv_cb(OnDataRecv);
-
+  
+  //Set PIN's mode to OUTPUT
   pinMode(LED_PIN, OUTPUT);
+  pinMode(RELAY, OUTPUT);
+  //Set both used pins to LOW
+  digitalWrite (LED_PIN, HIGH);
+  digitalWrite (RELAY, LOW);
 
 }
 
