@@ -13,7 +13,8 @@
 #include <WiFi.h> //For ESP32
 
 #define LED_PIN 10
-#define RELAY 26
+#define RELAY1 26
+#define RELAY2 0
 
 // Structure example to receive data
 // Must match the sender structure
@@ -45,10 +46,10 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
 
   } else if (myData.b == 1) {
   
-    digitalWrite (LED_PIN, HIGH); digitalWrite (RELAY, HIGH);
+    digitalWrite (LED_PIN, HIGH); digitalWrite (RELAY1, HIGH);
     delay(100);
     Serial.println("LONG!");
-    digitalWrite (LED_PIN, LOW);digitalWrite (RELAY, LOW);
+    digitalWrite (LED_PIN, LOW);digitalWrite (RELAY1, LOW);
     delay(100);
     digitalWrite (LED_PIN, HIGH);
     
@@ -56,10 +57,10 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
 
   } else if (myData.b == 2) {
 
-    digitalWrite (LED_PIN, HIGH);
+    digitalWrite (LED_PIN, HIGH); digitalWrite (RELAY2, HIGH);
     delay(100);
-    Serial.println("SHORT - Ignoring that!");
-    digitalWrite (LED_PIN, LOW);
+    Serial.println("SHORT!");
+    digitalWrite (LED_PIN, LOW); digitalWrite (RELAY2, LOW);
     delay(100);
     digitalWrite (LED_PIN, HIGH);
     
@@ -86,10 +87,13 @@ void setup() {
   
   //Set PIN's mode to OUTPUT
   pinMode(LED_PIN, OUTPUT);
-  pinMode(RELAY, OUTPUT);
+  pinMode(RELAY1, OUTPUT);
+  pinMode(RELAY2, OUTPUT);
+  
   //Set both used pins to LOW
   digitalWrite (LED_PIN, HIGH);
-  digitalWrite (RELAY, LOW);
+  digitalWrite (RELAY1, LOW);
+  digitalWrite (RELAY2, LOW);
 
 }
 
